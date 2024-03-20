@@ -1,0 +1,53 @@
+---
+title: "K600"
+output: html_document
+date: "2024-03-20"
+---
+
+```{r setup, include=FALSE}
+ library(dplyr)
+ library(tidyr)
+ library(ggplot2)
+ library(magrittr)
+ library(cowplot)
+ library(lubridate)
+ qdat <- read.csv("./NorthThompson_stage_discharge_QAQC_20230214.csv") ## Read in discharge data for all streams
+ s <- read.csv("./Gradients_summary.csv")
+ s <- s %>% mutate(., slope = weighted_gradient/100) ## Generate correct units for slope
+ qdat <- qdat %>% mutate(., depth = stage_m + 0.1)
+```
+
+## Generate Plausable ranges of K600 for each stream
+Using observed discharge, depth, and gradient information, we can approximate the possible range of K600 and how it varies across stream sites in the North Thompson. Velocity is the one unknown model input. We consider a range of velocity from 0.1 m/s to 0.8 m/s. This range encompasses the reach-averaged velocities in these streams. 
+
+
+```{r cars}
+## Match in slope values
+qdat <- qdat |> inner_join(s, join_by(site_code == site_code))
+
+### Range of possible velocity
+qdat <- qdat %>% mutate(., vel_low = 0.1) 
+qdat <- qdat %>% mutate(., vel_med = 0.4)
+qdat <- qdat %>% mutate(., vel_high = 0.8)
+
+### Calculate K600 (1/D) for each Q over the range of velocities
+qdat <- qdat %>% mutate(., K600_low = (4725*(vel_low*slope)^0.86*discharge_cms^-0.14*depth^0.66)/depth)
+qdat <- qdat %>% mutate(., K600_med = (4725*(vel_med*slope)^0.86*discharge_cms^-0.14*depth^0.66)/depth)
+qdat <- qdat %>% mutate(., K600_high = (4725*(vel_high*slope)^0.86*discharge_cms^-0.14*depth^0.66)/depth)
+
+## Filter only 2022 to make dataset more workable
+
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+ggplot(qdat, aes(x=discharge_cms, y= K600_med))+
+  geom_point()
+
+
+```
+
